@@ -1,0 +1,108 @@
+name: Sync docs subtrees
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  sync-docs:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - upstream_url: https://github.com/ViFigueiredo/wwwfigcodes.git
+            upstream_remote: wwwfigcodes-upstream
+            upstream_branch: main
+            prefix_dir: wwwfigcodes
+            commit_message: "chore: sync wwwfigcodes docs subtree"
+          - upstream_url: https://github.com/ViFigueiredo/portal_s4a.git
+            upstream_remote: portal-s4a-upstream
+            upstream_branch: main
+            prefix_dir: portal_s4a
+            commit_message: "chore: sync portal_s4a docs subtree"
+          - upstream_url: https://github.com/ViFigueiredo/gestao_cobranca_avantti.git
+            upstream_remote: gestao-cobranca-avantti-upstream
+            upstream_branch: master
+            prefix_dir: gestao_cobranca_avantti
+            commit_message: "chore: sync gestao_cobranca_avantti docs subtree"
+          - upstream_url: https://github.com/ViFigueiredo/WhatsUpLeads.git
+            upstream_remote: whatsupleads-upstream
+            upstream_branch: main
+            prefix_dir: WhatsUpLeads
+            commit_message: "chore: sync WhatsUpLeads docs subtree"
+          - upstream_url: https://github.com/ViFigueiredo/router_db_avantti.git
+            upstream_remote: router-db-avantti-upstream
+            upstream_branch: master
+            prefix_dir: router_db_avantti
+            commit_message: "chore: sync router_db_avantti docs subtree"
+          - upstream_url: https://github.com/ViFigueiredo/Chatwoot_Manager.git
+            upstream_remote: chatwoot-manager-upstream
+            upstream_branch: master
+            prefix_dir: Chatwoot_Manager
+            commit_message: "chore: sync Chatwoot_Manager docs subtree"
+          - upstream_url: https://github.com/ViFigueiredo/DataSniffer-AI.git
+            upstream_remote: datasniffer-ai-upstream
+            upstream_branch: master
+            prefix_dir: DataSniffer-AI
+            commit_message: "chore: sync DataSniffer-AI docs subtree"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Sync subtree from upstream
+        env:
+          UPSTREAM_URL: ${{ matrix.upstream_url }}
+          UPSTREAM_REMOTE: ${{ matrix.upstream_remote }}
+          UPSTREAM_BRANCH: ${{ matrix.upstream_branch }}
+          PREFIX_DIR: ${{ matrix.prefix_dir }}
+        run: |
+          if git remote get-url "$UPSTREAM_REMOTE" >/dev/null 2>&1; then
+            git remote set-url "$UPSTREAM_REMOTE" "$UPSTREAM_URL"
+          else
+            git remote add "$UPSTREAM_REMOTE" "$UPSTREAM_URL"
+          fi
+
+          git fetch "$UPSTREAM_REMOTE" "$UPSTREAM_BRANCH"
+
+          if git subtree pull --prefix="$PREFIX_DIR" "$UPSTREAM_REMOTE" "$UPSTREAM_BRANCH" --squash; then
+            echo "Subtree pull concluído."
+          else
+            echo "Subtree pull falhou, tentando subtree add (primeira sincronização/fallback)."
+            rm -rf "$PREFIX_DIR"
+            git subtree add --prefix="$PREFIX_DIR" "$UPSTREAM_REMOTE" "$UPSTREAM_BRANCH" --squash
+          fi
+
+      - name: Keep only docs
+        env:
+          PREFIX_DIR: ${{ matrix.prefix_dir }}
+        run: |
+          find "$PREFIX_DIR" -type f ! -name "*.md" ! -path "*/docs/*" -delete
+          find "$PREFIX_DIR" -type d -empty ! -name "docs" -delete
+
+      - name: Commit and push when changed
+        env:
+          PREFIX_DIR: ${{ matrix.prefix_dir }}
+          COMMIT_MESSAGE: ${{ matrix.commit_message }}
+        run: |
+          git add -A "$PREFIX_DIR"
+
+          if git diff --cached --quiet; then
+            echo "Sem mudanças para commit."
+            exit 0
+          fi
+
+          git commit -m "$COMMIT_MESSAGE"
+          git push

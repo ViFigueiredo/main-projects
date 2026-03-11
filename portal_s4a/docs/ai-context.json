@@ -1,0 +1,33 @@
+{
+    "canonicalInstructionFile": "AGENTS.md",
+    "documentationRoot": "docs",
+    "developerEntryPoint": "README.md",
+    "copilotInstructionFile": ".github/copilot-instructions.md",
+    "deploy": {
+        "mode": "docker-swarm-portainer",
+        "stackFile": "docker-stack.yaml",
+        "requiredNetworks": [
+            "internal",
+            "databases",
+            "tunnel",
+            "public"
+        ]
+    },
+    "stack": {
+        "framework": "Next.js App Router",
+        "language": "TypeScript strict",
+        "ui": "Tailwind + Shadcn/UI",
+        "forms": "react-hook-form + zod",
+        "database": "Neon PostgreSQL",
+        "charts": "Recharts",
+        "icons": "lucide-react"
+    },
+    "criticalRules": [
+        "Always enforce authentication and authorization in API routes and Server Actions.",
+        "Always enforce company_id scope for multi-tenant reads and writes.",
+        "Apply persistent schema changes using Neon MCP tools and validate in information_schema.",
+        "Use only S3-compatible storage (Backblaze B2) for uploads.",
+        "Each new feature must evaluate user notification needs."
+    ],
+    "documentationSyncPolicy": "Whenever architecture, business rules, deploy, security, permissions, integrations, or stack changes, update AGENTS.md, docs/, README.md, .github/copilot-instructions.md and ai_instructions.json in the same delivery."
+}
